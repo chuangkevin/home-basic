@@ -5,12 +5,29 @@ services:
       - "4096:4096"
       - "1455:1455"   # OAuth browser callback (fixed port)
     environment:
-      # Default: opencode/gpt-5-nano (free, no key needed)
-      # Upgrade: set OPENCODE_API_KEY for paid zen models
       - OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4-flash-free","small_model":"opencode/deepseek-v4-flash-free"}
       - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD:-}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
+    volumes:
+      - opencode-data:/root/.local/share/opencode
+      - opencode-config:/root/.config/opencode
     restart: unless-stopped
+
+  web:
+    image: node:22-alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web:/app:ro
+    working_dir: /app
+    command: sh -c "npm config set strict-ssl false && npx -y serve . -p 3000 -n"
+    depends_on:
+      - opencode
+    restart: unless-stopped
+
+volumes:
+  opencode-data:
+  opencode-config:
