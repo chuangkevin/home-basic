@@ -293,8 +293,8 @@
   <input type="file" id="file-input" accept="image/*" multiple>
 
   <script>
-    const API = 'http://localhost:4096'
-    const DEFAULT_MODEL = { providerID: 'opencode', modelID: 'deepseek-v4-flash-free' }
+    const API = `${window.location.protocol}//${window.location.hostname || 'localhost'}:4096`
+    const DEFAULT_MODEL = { providerID: 'opencode', modelID: 'deepseek-v4-flash-free', variant: 'default' }
 
     let sessionId = null
     let pendingImages = []
@@ -319,8 +319,29 @@
     function selectedModel() {
       const val = modelSelect.value
       if (!val) return DEFAULT_MODEL
-      const [providerID, ...rest] = val.split('/')
-      return { providerID, modelID: rest.join('/') }
+      try {
+        return JSON.parse(val)
+      } catch {
+        const [providerID, ...rest] = val.split('/')
+        return { providerID, modelID: rest.join('/'), variant: 'default' }
+      }
+    }
+
+    function modelOptionValue(providerID, modelID, variant) {
+      return JSON.stringify({ providerID, modelID, variant })
+    }
+
+    function modelTag(model) {
+      const variant = model.variant && !['default', 'none'].includes(model.variant) ? ` / ${model.variant}` : ''
+      return `${model.providerID}/${model.modelID}${variant}`
+    }
+
+    function sessionModelPayload(model) {
+      return { providerID: model.providerID, id: model.modelID, variant: model.variant || 'default' }
+    }
+
+    function messageModelPayload(model) {
+      return { providerID: model.providerID, modelID: model.modelID }
     }
 
     async function loadModels() {
@@ -350,15 +371,20 @@
           group.label = provider.name + (needsAuth ? ' 🔒' : ' ✓')
 
           for (const model of modelEntries) {
-            const opt = document.createElement('option')
-            opt.value = `${provider.id}/${model.id}`
-            const cost = model.cost?.input === 0 ? ' (free)' : ''
-            opt.textContent = (model.name || model.id) + cost
-            if (!needsAuth && !defaultSet) {
-              opt.selected = true
-              defaultSet = true
+            const variants = Object.keys(model.variants || {})
+            const variantNames = variants.length > 0 ? variants : ['default']
+            for (const variant of variantNames) {
+              const opt = document.createElement('option')
+              opt.value = modelOptionValue(provider.id, model.id, variant)
+              const cost = model.cost?.input === 0 ? ' (free)' : ''
+              const variantLabel = variant && !['default', 'none'].includes(variant) ? ` / ${variant}` : ''
+              opt.textContent = (model.name || model.id) + variantLabel + cost
+              if (!needsAuth && !defaultSet) {
+                opt.selected = true
+                defaultSet = true
+              }
+              group.appendChild(opt)
             }
-            group.appendChild(opt)
           }
           modelSelect.appendChild(group)
         }
@@ -455,12 +481,16 @@
 
     // ── session ───────────────────────────────────────────────
 
-    async function ensureSession() {
+    async function ensureSession(model) {
       if (sessionId) return
       const res = await fetch(`${API}/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}',
+        body: JSON.stringify({
+          title: 'OpenCode Chat',
+          agent: 'general',
+          model: sessionModelPayload(model),
+        }),
       })
       if (!res.ok) throw new Error(`Create session failed: ${res.status}`)
       const data = await res.json()
@@ -586,11 +616,15 @@
       const typing = appendTyping()
 
       try {
-        await ensureSession()
+        await ensureSession(model)
         const res = await fetch(`${API}/session/${sessionId}/message`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ parts, model }),
+          body: JSON.stringify({
+            agent: 'general',
+            parts,
+            model: messageModelPayload(model),
+          }),
         })
         typing.remove()
         if (!res.ok) {
@@ -600,7 +634,7 @@
         const data = await res.json()
         const textParts = (data.parts ?? []).filter(p => p.type === 'text' && !p.synthetic)
         if (textParts.length > 0) {
-          appendMessage('assistant', textParts, `${model.providerID}/${model.modelID}`)
+          appendMessage('assistant', textParts, modelTag(model))
         } else {
           appendError('No text response received.')
         }
@@ -622,6 +656,7 @@
     }
 
     sendBtn.addEventListener('click', send)
+    modelSelect.addEventListener('change', resetSession)
     textInput.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
     })
