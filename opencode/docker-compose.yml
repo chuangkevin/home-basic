@@ -7,7 +7,7 @@ services:
     environment:
       # Default: opencode/gpt-5-nano (free, no key needed)
       # Upgrade: set OPENCODE_API_KEY for paid zen models
-      - OPENCODE_CONFIG_CONTENT={"model":"opencode/gpt-5-nano","small_model":"opencode/gpt-5-nano"}
+      - OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4-flash-free","small_model":"opencode/deepseek-v4-flash-free"}
       - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
