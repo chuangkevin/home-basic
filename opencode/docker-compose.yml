@@ -6,11 +6,13 @@ services:
       - "1455:1455"   # OAuth browser callback (fixed port)
     environment:
       - OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4-flash-free","small_model":"opencode/deepseek-v4-flash-free"}
-      - OPENCODE_API_KEY=${OPENCODE_API_KEY:-}
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - OPENCODE_SERVER_PASSWORD=${OPENCODE_SERVER_PASSWORD:-}
-      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - opencode-data:/root/.local/share/opencode
       - opencode-config:/root/.config/opencode
