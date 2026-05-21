@@ -2,6 +2,8 @@
 
 This repository is a GitHub template. When a new project is generated from it, these rules activate immediately so any AI coding assistant follows the same workflow conventions from the first commit.
 
+> **Looking for what's deployable in this repo?** This file is workflow rules only. The repo also ships a runnable OpenCode provider container in `opencode/`. **Read [`README.md`](./README.md) first** — it lists every subfolder, gives the `docker compose up -d` quick-start, and points to the deployment notes in `opencode/README.md`.
+
 Edit this file freely to add stack-, domain-, or team-specific rules for your project. Keep the Skill Activation section so the bundled `skills/` and `.github/skills/` stay wired in.
 
 ## Global Working Rules
