@@ -15,6 +15,8 @@ This directory runs a small OpenCode provider service plus a browser chat UI. It
 - Use `network_mode: host` for the amd64 provider if Docker published ports produce connection resets/refusals.
 - The browser OAuth callback port is `1455`. If Windows cannot bind `localhost:1455`, use the Manjaro Tailscale host callback URL and preserve the full query string.
 - On Kevinhome, Docker cannot bind host port `1455` because Windows reserves it; `docker-compose.home.yml` intentionally does not publish `1455`. The Web UI defaults OpenAI OAuth to `ChatGPT Pro/Plus (headless)` device-code auth, which avoids localhost callback. Keep provider API health separate from OAuth callback setup.
+- On remote k3s / NodePort deployments, do not use OpenAI browser OAuth by default. Browser OAuth redirects to the user's own `localhost:1455`, not the pod. Use headless/device-code auth unless you intentionally port-forward local `1455` to the remote `opencode` service.
+- After `auth.json` changes, the entrypoint restarts `opencode` once to reload provider state. The watcher must update its hash baseline before killing the process; otherwise a successful OAuth write causes an infinite restart loop and `/provider` returns 502.
 - Provider images are pinned to `opencode-ai@1.15.5` until the `1.15.6` OpenAI message model resolver regression is cleared.
 
 ## Kevinhome Deployment
@@ -45,6 +47,25 @@ Kevinhome Windows reserves TCP port `1455`, so the OpenAI browser callback flow 
 8. Return to the chat UI and click `完成驗證` to save the token into the provider.
 
 Do not use `OpenAI (browser callback, needs localhost:1455)` on Kevinhome unless Windows no longer reserves port `1455` and the compose file publishes that port.
+
+## Remote K8s / NodePort OAuth Pitfall
+
+For deployments like `srvhpgit1:32096` where the chat UI is served through Kubernetes and the provider runs in a pod, OpenAI browser OAuth is misleading: the callback URL is still `http://localhost:1455/auth/callback`, and that `localhost` belongs to the browser user's machine. If the user has another local Docker / WSL process bound to `1455`, the callback can hit the wrong process and OpenCode will eventually timeout.
+
+Use the headless/device-code option for remote deployments. If browser OAuth is required for debugging, first ensure nothing local owns `1455`, then run a local port-forward to the remote service:
+
+```powershell
+kubectl --kubeconfig D:\Projects\argo-app\k3s-srvhpgit1測試機.yaml -n home-basic port-forward svc/opencode 1455:1455
+```
+
+If the UI says auth completed but the model list changes to `載入失敗`, check for an `auth.json` restart loop:
+
+```powershell
+kubectl --kubeconfig D:\Projects\argo-app\k3s-srvhpgit1測試機.yaml logs deploy/opencode -n home-basic --tail=120
+curl.exe -i --max-time 20 http://srvhpgit1:32096/provider
+```
+
+Repeated `auth.json changed, restarting opencode...` means the watcher baseline is stale. The fix is to set `PREV_HASH="$CURR_HASH"` before killing the process.
 
 ## Consumer API Contract
 

@@ -10,6 +10,7 @@ while true; do
     CURR_HASH=$(md5sum "$AUTH_FILE" 2>/dev/null | cut -d' ' -f1)
     if [ -n "$PREV_HASH" ] && [ "$CURR_HASH" != "$PREV_HASH" ]; then
       echo "auth.json changed, restarting opencode..."
+      PREV_HASH="$CURR_HASH"
       kill $OPENCODE_PID
       break
     fi
