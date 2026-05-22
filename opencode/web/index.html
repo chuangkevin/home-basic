@@ -350,14 +350,20 @@
       return { providerID: model.providerID, modelID: model.modelID }
     }
 
-    async function loadModels() {
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms))
+    }
+
+    async function loadModels(attempt = 0) {
       try {
         const res = await fetch(`${API}/provider`)
+        if (!res.ok) throw new Error(`/provider ${res.status}`)
         const data = await res.json()
 
         // Focus on opencode (always free) + any provider user has authed
         const SHOW_PROVIDERS = ['opencode', 'openai', 'github-copilot', 'google', 'anthropic']
         const authRes = await fetch(`${API}/provider/auth`)
+        if (!authRes.ok) throw new Error(`/provider/auth ${authRes.status}`)
         const authData = await authRes.json()
         const authProviders = new Set(Object.keys(authData))
 
@@ -397,7 +403,12 @@
           modelSelect.appendChild(group)
         }
       } catch (e) {
-        modelSelect.innerHTML = '<option value="">載入失敗</option>'
+        if (attempt < 10) {
+          modelSelect.innerHTML = '<option value="">模型重載中...</option>'
+          await sleep(2000)
+          return loadModels(attempt + 1)
+        }
+        modelSelect.innerHTML = '<option value="">載入失敗，請重新整理</option>'
         console.error('loadModels failed', e)
       }
     }
