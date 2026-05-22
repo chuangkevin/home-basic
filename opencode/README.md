@@ -67,6 +67,8 @@ curl.exe -i --max-time 20 http://srvhpgit1:32096/provider
 
 Repeated `auth.json changed, restarting opencode...` means the watcher baseline is stale. The fix is to set `PREV_HASH="$CURR_HASH"` before killing the process.
 
+The Web UI must also retry model loading after OAuth. A successful token write restarts OpenCode once, so `/provider` can briefly return 502. Do not leave `loadModels()` as a single-shot fetch after auth; retry with backoff and show a temporary `模型重載中...` state.
+
 ## Consumer API Contract
 
 OpenCode's session creation and message payloads do not use the same model key names.
