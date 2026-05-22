@@ -266,8 +266,8 @@
     <div class="auth-row">
       <label style="font-weight:600">Provider</label>
       <select id="auth-provider-select">
-        <option value="openai" data-method="0">OpenAI (ChatGPT Pro/Plus - browser)</option>
-        <option value="openai" data-method="1">OpenAI (ChatGPT Pro/Plus - headless)</option>
+        <option value="openai" data-method="1" selected>OpenAI (ChatGPT Pro/Plus - headless/device code)</option>
+        <option value="openai" data-method="0">OpenAI (browser callback, needs localhost:1455)</option>
         <option value="github-copilot" data-method="0">GitHub Copilot</option>
       </select>
       <button id="auth-start-btn">開始驗證</button>
@@ -331,13 +331,19 @@
       return JSON.stringify({ providerID, modelID, variant })
     }
 
+    function preferredVariant(providerID, modelID, variant) {
+      if (variant && variant !== 'default') return variant
+      if (providerID === 'openai' && /^gpt-5(\.|-|$)/.test(modelID)) return 'medium'
+      return variant || 'default'
+    }
+
     function modelTag(model) {
       const variant = model.variant && !['default', 'none'].includes(model.variant) ? ` / ${model.variant}` : ''
       return `${model.providerID}/${model.modelID}${variant}`
     }
 
     function sessionModelPayload(model) {
-      return { providerID: model.providerID, id: model.modelID, variant: model.variant || 'default' }
+      return { providerID: model.providerID, id: model.modelID, variant: preferredVariant(model.providerID, model.modelID, model.variant) }
     }
 
     function messageModelPayload(model) {
@@ -372,7 +378,9 @@
 
           for (const model of modelEntries) {
             const variants = Object.keys(model.variants || {})
-            const variantNames = variants.length > 0 ? variants : ['default']
+            const variantNames = variants.includes('medium')
+              ? ['medium', ...variants.filter(variant => variant !== 'medium')]
+              : (variants.length > 0 ? variants : ['default'])
             for (const variant of variantNames) {
               const opt = document.createElement('option')
               opt.value = modelOptionValue(provider.id, model.id, variant)
@@ -624,6 +632,7 @@
             agent: 'general',
             parts,
             model: messageModelPayload(model),
+            variant: preferredVariant(model.providerID, model.modelID, model.variant),
           }),
         })
         typing.remove()
