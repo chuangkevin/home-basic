@@ -354,6 +354,10 @@
       return new Promise(resolve => setTimeout(resolve, ms))
     }
 
+    function isProviderConnected(provider) {
+      return provider.id === 'opencode' || Boolean(provider.options?.apiKey)
+    }
+
     async function loadModels(attempt = 0) {
       try {
         const res = await fetch(`${API}/provider`)
@@ -366,21 +370,30 @@
         if (!authRes.ok) throw new Error(`/provider/auth ${authRes.status}`)
         const authData = await authRes.json()
         const authProviders = new Set(Object.keys(authData))
+        const providers = Array.isArray(data.all) ? data.all : []
+        const connectedProviders = new Set(providers.filter(isProviderConnected).map(provider => provider.id))
+        const openaiConnected = connectedProviders.has('openai')
+
+        authToggleBtn.classList.toggle('success', openaiConnected)
+        authToggleBtn.textContent = openaiConnected ? '✓ Connected' : '🔑 Connect'
+        if (openaiConnected) {
+          authStatus.className = 'done'
+          authStatus.textContent = '✓ openai 已連線，重新整理後仍有效。'
+        }
 
         modelSelect.innerHTML = ''
         let defaultSet = false
 
-        for (const provider of data.all) {
+        for (const provider of providers) {
           if (!SHOW_PROVIDERS.includes(provider.id)) continue
           const modelEntries = Object.values(provider.models || {})
           if (modelEntries.length === 0) continue
 
-          // For providers that need auth (in authData), only show if they have
-          // models that are accessible (we'll show them but they may fail at runtime)
           const needsAuth = authProviders.has(provider.id)
+          const connected = connectedProviders.has(provider.id)
 
           const group = document.createElement('optgroup')
-          group.label = provider.name + (needsAuth ? ' 🔒' : ' ✓')
+          group.label = provider.name + (connected || !needsAuth ? ' ✓' : ' 🔒')
 
           for (const model of modelEntries) {
             const variants = Object.keys(model.variants || {})
@@ -393,7 +406,7 @@
               const cost = model.cost?.input === 0 ? ' (free)' : ''
               const variantLabel = variant && !['default', 'none'].includes(variant) ? ` / ${variant}` : ''
               opt.textContent = (model.name || model.id) + variantLabel + cost
-              if (!needsAuth && !defaultSet) {
+              if (!defaultSet && ((openaiConnected && provider.id === 'openai') || (!openaiConnected && connected && !needsAuth))) {
                 opt.selected = true
                 defaultSet = true
               }

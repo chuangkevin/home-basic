@@ -69,6 +69,8 @@ Repeated `auth.json changed, restarting opencode...` means the watcher baseline 
 
 The Web UI must also retry model loading after OAuth. A successful token write restarts OpenCode once, so `/provider` can briefly return 502. Do not leave `loadModels()` as a single-shot fetch after auth; retry with backoff and show a temporary `模型重載中...` state.
 
+On page refresh, the Web UI should infer whether OpenAI is already connected from `/provider` instead of resetting the Connect button to an unauthenticated state. For OpenAI OAuth, a loaded provider with `options.apiKey` means the token is already persisted and usable.
+
 ## Consumer API Contract
 
 OpenCode's session creation and message payloads do not use the same model key names.
