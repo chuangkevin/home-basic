@@ -1,8 +1,8 @@
 services:
   opencode:
     build: .
-    expose:
-      - "4096"
+    ports:
+      - "4096:4096"
     environment:
       - OPENCODE_CONFIG_CONTENT={"model":"opencode/deepseek-v4-flash-free","small_model":"opencode/deepseek-v4-flash-free"}
       - NODE_TLS_REJECT_UNAUTHORIZED=0
