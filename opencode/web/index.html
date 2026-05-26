@@ -293,7 +293,7 @@
   <input type="file" id="file-input" accept="image/*" multiple>
 
   <script>
-    const API = `${window.location.protocol}//${window.location.hostname || 'localhost'}:4096`
+    const API = '/api'
     const DEFAULT_MODEL = { providerID: 'opencode', modelID: 'deepseek-v4-flash-free', variant: 'default' }
 
     let sessionId = null

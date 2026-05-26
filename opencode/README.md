@@ -9,12 +9,11 @@ This directory runs a small OpenCode provider service plus a browser chat UI. It
 - Do not add or use `https://opencode-amd.sisihome.org`; that hostname is not part of the deployment contract.
 - The amd64 provider runs on the Manjaro host (`100.73.52.37`) and is exposed on port `4096`.
 - The Kevinhome provider runs on `100.83.112.20`, container `provider-home`, host port `4098` -> container port `4096`; RPi Caddy routes `provider-home.sisihome.org` to `100.83.112.20:4098`.
-- The browser chat UI runs on `http://100.73.52.37:3000` and calls port `4096` on the same hostname.
-- The Kevinhome browser chat UI runs on `http://100.83.112.20:3002` via container `provider-home-web`.
+- The browser chat UI is served by Caddy on host port `3000` (local compose) or `3002` (Kevinhome compose). Caddy reverse-proxies `/api/*` to the internal `opencode:4096` service, so the browser only ever talks to its own origin and there is no CORS layer to fight.
+- The opencode service container does NOT publish port `4096` in the local `docker-compose.yml`; it is reachable only via the compose network. The Kevinhome `docker-compose.home.yml` keeps `4098:4096` exposed because external consumers hit `provider-home.sisihome.org` directly.
 - The provider is intentionally no-auth on the private network. Do not set `OPENCODE_SERVER_PASSWORD` for this deployment, and do not make consumers send Basic auth or custom provider passwords.
 - Use `network_mode: host` for the amd64 provider if Docker published ports produce connection resets/refusals.
-- The browser OAuth callback port is `1455`. If Windows cannot bind `localhost:1455`, use the Manjaro Tailscale host callback URL and preserve the full query string.
-- On Kevinhome, Docker cannot bind host port `1455` because Windows reserves it; `docker-compose.home.yml` intentionally does not publish `1455`. The Web UI defaults OpenAI OAuth to `ChatGPT Pro/Plus (headless)` device-code auth, which avoids localhost callback. Keep provider API health separate from OAuth callback setup.
+- Browser-callback OAuth (`localhost:1455`) is no longer supported by the compose files; the UI only offers the ChatGPT Pro/Plus headless / device-code flow, which does not need a callback port. Do not republish `1455:1455` unless you are intentionally reintroducing browser OAuth on a localhost-only deployment.
 - On remote k3s / NodePort deployments, do not use OpenAI browser OAuth by default. Browser OAuth redirects to the user's own `localhost:1455`, not the pod. Use headless/device-code auth unless you intentionally port-forward local `1455` to the remote `opencode` service.
 - After `auth.json` changes, the entrypoint restarts `opencode` once to reload provider state. The watcher must update its hash baseline before killing the process; otherwise a successful OAuth write causes an infinite restart loop and `/provider` returns 502.
 - Provider images are pinned to `opencode-ai@1.15.5` until the `1.15.6` OpenAI message model resolver regression is cleared.
@@ -46,7 +45,18 @@ Kevinhome Windows reserves TCP port `1455`, so the OpenAI browser callback flow 
 7. Enter the code and finish OpenAI login in the browser.
 8. Return to the chat UI and click `完成驗證` to save the token into the provider.
 
-Do not use `OpenAI (browser callback, needs localhost:1455)` on Kevinhome unless Windows no longer reserves port `1455` and the compose file publishes that port.
+The disabled `OpenAI (browser callback, needs localhost:1455)` option is intentionally inert in both compose files. Re-enable it only on a localhost-only deployment where you have also republished `1455:1455`.
+
+## Web UI Routing
+
+The chat UI is served by Caddy. The frontend calls relative URLs under `/api`, and Caddy reverse-proxies them to the internal `opencode:4096` service:
+
+```
+browser  ──>  http://<host>:3000/api/provider        (same-origin)
+caddy    ──>  http://opencode:4096/provider          (docker network)
+```
+
+There is no cross-origin layer to fight. If you are tempted to point the frontend directly at port `4096`, stop: opencode's CORS allowlist only echoes `Access-Control-Allow-Origin` for `localhost` / `127.0.0.1`, so any other hostname (LAN host, Tailscale name, container ID) will silently fail with `Failed to fetch` in the browser despite the API being reachable via `curl`.
 
 ## Remote K8s / NodePort OAuth Pitfall
 

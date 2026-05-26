@@ -1,0 +1,12 @@
+:3000 {
+	encode gzip
+
+	handle_path /api/* {
+		reverse_proxy opencode:4096
+	}
+
+	handle {
+		root * /srv
+		file_server
+	}
+}
