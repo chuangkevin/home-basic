@@ -47,6 +47,7 @@ Treat the following skill files as active workflow rules for this workspace, eve
 - Treat `skills/completion-checklist/SKILL.md` as mandatory for any code change before reporting completion
 - Treat `skills/deployment/SKILL.md` as mandatory for deployment, Docker, reverse-proxy, CI/CD, and release work
 - Treat `skills/frontend-design/SKILL.md` as mandatory for frontend creation or redesign work
+- Treat `skills/liquid-glass-ui/SKILL.md` as the reference implementation when building Apple-style liquid glass / frosted glass UI surfaces (toasts, modals, panels, cards)
 - Treat `skills/key-pool-standard/SKILL.md` as mandatory for any AI key-pool, quota, or multi-key retry implementation
 - Treat `skills/skill-creator/SKILL.md` as the active workflow when creating, improving, or evaluating a skill
 - Treat `.github/skills/openspec-explore/SKILL.md` as the active workflow when the user wants exploration without implementation
@@ -66,6 +67,7 @@ Mirror locations (`.claude/skills/`, `.gemini/skills/`, `.opencode/skills/`, `.g
 ## When To Remove Or Replace Skills
 
 - Remove `skills/frontend-design/` if the project has no frontend.
+- Remove `skills/liquid-glass-ui/` if the project has no frontend or does not use glass-style UI.
 - Remove `skills/key-pool-standard/` if the project does not use AI API keys.
 - Remove `skills/agent-design/` if the project is not building AI agents.
 - Keep `skills/execution-style/`, `skills/completion-checklist/`, `skills/plan-before-build/`, `skills/root-cause-debugging/`, `skills/verification-and-evidence/`, and `skills/integration-robustness/` for any project.
