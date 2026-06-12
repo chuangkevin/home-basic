@@ -124,3 +124,11 @@ SVG 折射 filter（注入 body 一次即可）：
 - [ ] droplet：背景文字在中心區清楚可見、邊緣有折射帶
 - [ ] 有 `-webkit-` 前綴（Safari）；`url()` filter 有純函數 fallback 宣告
 - [ ] toast 不與 topbar 重疊
+- [ ] **grep 全 codebase 的 overlay/modal/toast/dialog 類名與 inline style，
+      確認沒有第二套舊玻璃樣式殘留**——寫死在 HTML 的靜態 dialog（如登入提示）
+      最容易漏，改版時它不會跟著共用元件走，上線後才被使用者抓到風格不一致
+
+實戰教訓：gitea-html-viewer 的登入提示是獨立的 `#authPrompt` 靜態 HTML（自帶
+`.auth-overlay`/`.auth-modal` CSS），不走共用 `modal()`，玻璃改版迭代了 7 個版本
+它全程沒跟上，直到部署後才發現。同一視覺體系的樣式來源應該唯一（共用 class 或
+共用元件）；做不到時，至少在驗收時 grep 把所有平行實作找出來逐一比對。
